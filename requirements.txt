@@ -9,3 +9,5 @@ types-requests
 numpy
 flask
 flask-session
+json
+gunicorn==20.1.0
