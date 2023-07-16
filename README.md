@@ -1,3 +1,5 @@
+run endpoint on port 5001 with `python app.py`
+
 # Paper QA- [Paper QA](#paper-qa)
 - [Paper QA- Paper QA](#paper-qa--paper-qa)
   - [Output Example](#output-example)
