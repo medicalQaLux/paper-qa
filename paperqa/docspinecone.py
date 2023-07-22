@@ -50,18 +50,16 @@ class DocsPineCone(Docs):
     doc_index_name: Optional[str] = None
     text_index_name: Optional[str] = None
     embedding_function = OpenAIEmbeddings(client=None).embed_query
+    text_index_p: Optional[pinecone.Index] = None
 
-    def __init__(self,doc_index_name="paperqa-docs", text_index_name="paperqa-text", *args, **kwargs):
+    def __init__(self, text_index_name="paperqa-index", *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.doc_index_name: Optional[str] = doc_index_name
         self.text_index_name: Optional[str] = text_index_name
 
-
-        doc_index_p = pinecone.Index(doc_index_name)
-        text_index_p = pinecone.Index(text_index_name)
+        self.text_index_p = pinecone.Index(text_index_name)
         
-        self.doc_index = Pinecone(index=text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
-        self.texts_index = Pinecone(index=text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
+        self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
+        self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
 
     def add_texts(
         self,
@@ -72,8 +70,8 @@ class DocsPineCone(Docs):
 
         Returns True if the document was added, False if it was already in the collection.
         """
-        if doc.dockey in self.docs:
-            return False
+        # if doc.dockey in self.docs:
+        #     return False
         if len(texts) == 0:
             raise ValueError("No texts to add.")
         if doc.docname in self.docnames:
@@ -83,15 +81,14 @@ class DocsPineCone(Docs):
             doc.docname = new_docname
 
         if self.texts_index is not None:
-            try:
-                # metadatas=[doc.dict()]*len(texts)
-                metadatas=[ {**{"name":i.name},**i.doc.dict()} for i in texts]
-                texts = [ i.text for i in texts]
-                self.texts_index.add_texts( 
-                    texts,metadatas=metadatas
-                )
-            except AttributeError:
-                raise ValueError("Need a vector store that supports adding embeddings.")
+            # try:
+            # metadatas=[doc.dict()]*len(texts)
+            metadatas=[ {**{"name":i.name},**i.doc.dict()} for i in texts]
+            texts = [ i.text for i in texts]
+            self.texts_index.add_texts( 
+                texts,metadatas=metadatas
+            )
+        
         if self.doc_index is not None:
             self.doc_index.add_texts([doc.citation], metadatas=[doc.dict()])
         self.docs[doc.dockey] = doc
@@ -109,7 +106,8 @@ class DocsPineCone(Docs):
             texts = [doc.citation for doc in self.docs.values()]
             metadatas = [d.dict() for d in self.docs.values()]
             documents_conv = [Document(page_content=text, metadata=metadata) for text, metadata in zip(texts, metadatas)]
-            self.doc_index = Pinecone.from_documents(documents_conv, self.embeddings, index_name=self.doc_index_name)
+            self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
+        
          
         matches = self.doc_index.max_marginal_relevance_search(
             query, k=k + len(self.deleted_dockeys)
@@ -139,11 +137,11 @@ class DocsPineCone(Docs):
         object.__setattr__(self, "__dict__", state["__dict__"])
         object.__setattr__(self, "__fields_set__", state["__fields_set__"])
         try:
-            self.texts_index = Pinecone.from_existing_index(self.text_index_name, self.embeddings, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE)
+            self.texts_index = Pinecone.from_existing_index(self.text_index_name, self.embeddings, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
         except Exception:
             try:
                 index = pinecone.Index(self.text_index_name)
-                self.texts_index = Pinecone(index, embeddings.embed_query, "text")
+                self.texts_index = Pinecone(index, embeddings.embed_query, "text",namespace="texts")
             except Exception:
                 # they use some special exception type, but I don't want to import it
                 self.texts_index = None
@@ -162,7 +160,7 @@ class DocsPineCone(Docs):
             raw_texts = [t.text for t in texts]
             metadata=[{"doc_id": t.doc.dockey, "docname": t.doc.docname} for t in texts ]
             documents_conv = [Document(page_content=text, metadata=metadata) for text in raw_texts]
-            self.texts_index = Pinecone.from_documents(documents_conv, self.embeddings, index_name=self.text_index_name)
+            self.texts_index = Pinecone.from_documents(documents_conv, self.embeddings, index_name=self.text_index_name,namespace="texts")
 
 
     async def aget_evidence(
