@@ -8,8 +8,6 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Set, Union, cast
-import pandas as pd
-
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 pinecone_api_key = os.getenv('PINECONE_API_KEY')
@@ -53,6 +51,7 @@ class DocsPineCone(Docs):
     text_index_name: Optional[str] = None
     embedding_function = OpenAIEmbeddings(client=None).embed_query
     text_index_p: Optional[pinecone.Index] = None
+    marginal_relevance = True
 
     def __init__(self, text_index_name="paperqa-index", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,16 +59,8 @@ class DocsPineCone(Docs):
 
         self.text_index_p = pinecone.Index(text_index_name)
         
-        self.doc_index = Pinecone.from_existing_index(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
-        self.texts_index = Pinecone.from_existing_index(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
-        #self.__instantiate_docs__()
-
-    def __instantiate_docs__(self, parquet_file):
-        #temporary hack to set up the docs object
-        df_docs = pd.read_parquet(parquet_file)
-        for _, row in df_docs.iterrows():
-            self.docs[row['dockey']] =  Doc(docname = row['docname'], citation=row['citation'], dockey = row['dockey'])
-        return
+        self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
+        self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
 
     def add_texts(
         self,
@@ -176,8 +167,8 @@ class DocsPineCone(Docs):
     async def aget_evidence(
         self,
         answer: Answer,
-        k: int = 3,
-        max_sources: int = 5,
+        k: int = 20,
+        max_sources: int = 20,
         marginal_relevance: bool = True,
         get_callbacks: CallbackFactory = lambda x: None,
     ) -> Answer:
@@ -204,7 +195,7 @@ class DocsPineCone(Docs):
             matches = [
                 m
                 for m in matches
-                if m.metadatas["dockey"] in answer.dockey_filter
+                if m.metadata["dockey"] in answer.dockey_filter
             ]
 
         # check if it is deleted
@@ -217,13 +208,11 @@ class DocsPineCone(Docs):
 
         # check if it is already in answer
         cur_names = [c.text.name for c in answer.contexts]
-        matches = [m for m in matches if m.metadata["name"] not in cur_names]
-
+        matches = [m for m in matches if m.metadata["docname"] not in cur_names]
         # now finally cut down
         matches = matches[:k]
-
         async def process(match):
-            callbacks = get_callbacks("evidence:" + match.metadata["name"])
+            callbacks = get_callbacks("evidence:" + match.metadata["docname"])
             summary_chain = make_chain(
                 self.prompts.summary, self.summary_llm, memory=self.memory_model
             )
@@ -252,7 +241,7 @@ class DocsPineCone(Docs):
                 context=context,
                 text=Text(
                     text=match.page_content,
-                    name=match.metadata["name"],
+                    name=match.metadata["docname"],
                     doc=Doc(docname=match.metadata["docname"], citation=match.metadata["citation"], dockey=match.metadata["dockey"]),
                 ),
                 score=get_score(context),
