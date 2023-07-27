@@ -62,6 +62,13 @@ class DocsPineCone(Docs):
         self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
         self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
 
+    def __instantiate_docs__(self, parquet_file):
+        #temporary hack to set up the docs object
+        df_docs = pd.read_parquet(parquet_file)
+        for _, row in df_docs.iterrows():
+            self.docs[row['dockey']] =  Doc(docname = row['docname'], citation=row['citation'], dockey = row['dockey'])
+        return
+
     def add_texts(
         self,
         texts: List[Text],
