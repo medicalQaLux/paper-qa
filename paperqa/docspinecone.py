@@ -8,6 +8,7 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Set, Union, cast
+import pandas as pd
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
 pinecone_api_key = os.getenv('PINECONE_API_KEY')
@@ -53,7 +54,7 @@ class DocsPineCone(Docs):
     text_index_p: Optional[pinecone.Index] = None
     marginal_relevance = True
 
-    def __init__(self, text_index_name="paperqa-index", *args, **kwargs):
+    def __init__(self, text_index_name="paperqa-index", parquet_file = '', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text_index_name: Optional[str] = text_index_name
 
@@ -61,9 +62,13 @@ class DocsPineCone(Docs):
         
         self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
         self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
+        self.__instantiate_docs__(parquet_file)
 
     def __instantiate_docs__(self, parquet_file):
         #temporary hack to set up the docs object
+        if not parquet_file:
+            print ("WARNING: No doc parquet file detected, you need to add documents or this index will not work")
+            return 
         df_docs = pd.read_parquet(parquet_file)
         for _, row in df_docs.iterrows():
             self.docs[row['dockey']] =  Doc(docname = row['docname'], citation=row['citation'], dockey = row['dockey'])
