@@ -2,19 +2,30 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 openai_api_key = os.getenv('OPENAI_API_KEY')
+pinecone_api_key = os.getenv('PINECONE_API_KEY')
+pinecone_env = os.getenv('PINECONE_ENV')
+
+import pprint
 from paperqa import DocsPineCone, Docs
 import csv
 import multiprocessing
 import argparse
+import pinecone
+
+
+pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)
+pinecone.list_indexes()
+index = pinecone.Index("paperqa-index")
 
 # get a list of paths
 def process_documents():
     # this set of parquet files should be in s3 and MUST be loaded
-    parquet_files = '/Users/mandytoh/docs_index_dets.parquet'
+    parquet_files = 'docs_index_dets.parquet'
     # There are two indexes 
     # 1. paperqa-index (big, large, confusing, difficult, sad output)
     # 2. paperqa-openai-check (smaller, easier to search)
     docs = DocsPineCone(text_index_name = "paperqa-openai-check", parquet_file = parquet_files )
+    # docs = DocsPineCone(text_index_name = "paperqa-index", parquet_file = parquet_files )
 
     # how to add docs in vanilla paperqa
 
@@ -31,10 +42,24 @@ def process_documents():
     # )
 
     #query sets up the search + retrieval + llm
-    answer = docs.query("What manufacturing challenges are unique to bispecific antibodies?")
-    print(answer)
-    answer2 = docs.query("What is a transformer?")
-    print(answer2)
+    
+    
+    # jeffrey testing
+    # q = "What manufacturing challenges are unique to bispecific antibodies?"
+    # q = "What are antibodies?"
+    # q = "Explain the challenges of constructing solid-state quantum bits with long coherence times."
+    # q = "What is a transformer?"
+
+    questions = ["What is a transformer?",
+                 "What is ramp compression, and ramp decompression especially when generalizing previous solutions for scalar equations of state?",
+                 "Explain the challenges of constructing solid-state quantum bits with long coherence times?",
+                 "Explain the symmetry disquisition on the TiOX phase diagram ?"
+    ]
+    for q in questions:
+        a = docs.query(q)
+        pprint.pprint(a.__dict__)
+        print(type(a.references))
+        print(a.references[0])
 process_documents()
 
 

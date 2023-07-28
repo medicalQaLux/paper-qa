@@ -10,3 +10,8 @@ numpy
 flask
 flask-session
 gunicorn==20.1.0
+langchain
+html2text
+pypdf
+openai
+pinecone-client

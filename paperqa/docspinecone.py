@@ -179,8 +179,8 @@ class DocsPineCone(Docs):
     async def aget_evidence(
         self,
         answer: Answer,
-        k: int = 20,
-        max_sources: int = 20,
+        k: int = 5,  # Jeffrey: changed from 20
+        max_sources: int = 10,  # Jeffrey: changed from 20
         marginal_relevance: bool = True,
         get_callbacks: CallbackFactory = lambda x: None,
     ) -> Answer:
