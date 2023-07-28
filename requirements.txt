@@ -16,3 +16,4 @@ pypdf
 openai
 pinecone-client
 pandas
+pyarrow
