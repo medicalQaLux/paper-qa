@@ -12,11 +12,9 @@ app = Flask(__name__)
 from paperqa import DocsPineCone  # must come after the .env loads
 
 pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-pinecone.list_indexes()
-index = pinecone.Index("paperqa-index")
 parquet_file_path = 'docs_index_dets.parquet'
 paperqa_engine = DocsPineCone(text_index_name = "paperqa-index", parquet_file = parquet_file_path)
-small_paperqa_engine = DocsPineCone(text_index_name = "paperqa-openai-check", parquet_file = parquet_file_path)
+small_paperqa_engine = DocsPineCone(text_index_name = "paperqa-index", parquet_file = parquet_file_path, type = 'twitter')
 
 @app.route('/ask_rag', methods=['POST'])
 def ask_rag():
