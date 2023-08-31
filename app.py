@@ -20,13 +20,9 @@ small_paperqa_engine = DocsPineCone(text_index_name = "paperqa-index", parquet_f
 def ask_rag():
     req = request.get_json()
     chat_log = req['chat_log']
-    if req['index_size'] == 'small':
-        engine = small_paperqa_engine
-    else:
-        engine = paperqa_engine
     last_question = chat_log[-1]['user'] if chat_log else ''
     
-    a = engine.query(last_question)
+    a = paperqa_engine.query(last_question)
     return a.answer, 200
 
 if __name__ == "__main__":
