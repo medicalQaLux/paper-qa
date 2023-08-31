@@ -54,15 +54,19 @@ class DocsPineCone(Docs):
     text_index_p: Optional[pinecone.Index] = None
     marginal_relevance = True
 
-    def __init__(self, text_index_name="paperqa-index", parquet_file = '', *args, **kwargs):
+    def __init__(self, text_index_name="paperqa-index", parquet_file = '', type = 'default', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.text_index_name: Optional[str] = text_index_name
 
         self.text_index_p = pinecone.Index(text_index_name)
-        
-        self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
-        self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
-        self.__instantiate_docs__(parquet_file)
+        if type == 'default':
+            self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
+            self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
+            self.__instantiate_docs__(parquet_file)
+
+        elif type == 'twitter':
+            self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docstwitter")
+            self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="textstwitter")
 
     def __instantiate_docs__(self, parquet_file):
         #temporary hack to set up the docs object
