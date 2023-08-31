@@ -62,10 +62,11 @@ class DocsPineCone(Docs):
         if type == 'default':
             self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docs")
             self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="texts")
+            self.__instantiate_docs__(parquet_file)
+
         elif type == 'twitter':
             self.doc_index = Pinecone(index=self.text_index_p,text_key="text", embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="docstwitter")
             self.texts_index = Pinecone(index=self.text_index_p,text_key="text" ,embedding_function=self.embedding_function, distance_strategy=DistanceStrategy.EUCLIDEAN_DISTANCE,namespace="textstwitter")
-        self.__instantiate_docs__(parquet_file)
 
     def __instantiate_docs__(self, parquet_file):
         #temporary hack to set up the docs object
